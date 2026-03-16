@@ -2,10 +2,8 @@
 """
 toolkit.py — Cyber Toolkit main CLI entry point.
 
-Provides an interactive menu OR direct subcommand access to each security tool.
-
 Usage:
-    python toolkit.py                             # Interactive menu
+    python toolkit.py                              # Interactive menu
     python toolkit.py nmap --target 127.0.0.1
     python toolkit.py nikto --target http://localhost
     python toolkit.py whois --domain example.com
@@ -13,6 +11,13 @@ Usage:
     python toolkit.py gobuster --url http://localhost --wordlist data/wordlist.txt
     python toolkit.py sqlmap --url "http://site.com/page?id=1"
     python toolkit.py hashcat --hash <hash> --mode 0
+
+    # SIEM tools
+    python toolkit.py wazuh --action status
+    python toolkit.py suricata --action tail
+    python toolkit.py zeek --action log --log-type dns
+    python toolkit.py elk --action health
+    python toolkit.py elk --action indices
 """
 
 import argparse
@@ -20,15 +25,22 @@ import sys
 from utils.reporter import print_banner, print_menu
 from utils.checker import check_all_tools
 
-from tools.nmap_tool     import NmapTool
-from tools.nikto_tool    import NiktoTool
-from tools.sqlmap_tool   import SQLMapTool
-from tools.hashcat_tool  import HashcatTool
-from tools.gobuster_tool import GobusterTool
-from tools.whois_tool    import WhoisTool
-from tools.ssl_tool      import SSLTool
+from tools.nmap_tool      import NmapTool
+from tools.nikto_tool     import NiktoTool
+from tools.sqlmap_tool    import SQLMapTool
+from tools.hashcat_tool   import HashcatTool
+from tools.gobuster_tool  import GobusterTool
+from tools.whois_tool     import WhoisTool
+from tools.ssl_tool       import SSLTool
+
+# SIEM tools
+from tools.wazuh_tool     import WazuhTool
+from tools.suricata_tool  import SuricataTool
+from tools.zeek_tool      import ZeekTool
+from tools.elk_tool       import ELKTool
 
 TOOLS = {
+    # --- Penetration Testing ---
     "nmap":      NmapTool,
     "nikto":     NiktoTool,
     "sqlmap":    SQLMapTool,
@@ -36,6 +48,17 @@ TOOLS = {
     "gobuster":  GobusterTool,
     "whois":     WhoisTool,
     "sslcheck":  SSLTool,
+    # --- SIEM / Monitoring ---
+    "wazuh":     WazuhTool,
+    "suricata":  SuricataTool,
+    "zeek":      ZeekTool,
+    "elk":       ELKTool,
+}
+
+# Group tools for display
+TOOL_GROUPS = {
+    "🔍 Penetration Testing": ["nmap", "nikto", "sqlmap", "hashcat", "gobuster", "whois", "sslcheck"],
+    "🛡️  SIEM / Monitoring":  ["wazuh", "suricata", "zeek", "elk"],
 }
 
 
@@ -45,7 +68,7 @@ def interactive_menu():
     check_all_tools()
 
     menu_items = list(TOOLS.items())
-    print_menu(menu_items)
+    print_menu(menu_items, TOOL_GROUPS)
 
     try:
         choice = int(input("\n  Select a tool [1-{}]: ".format(len(menu_items)))) - 1
@@ -73,43 +96,66 @@ def run_subcommand(args):
 
 def build_parser():
     parser = argparse.ArgumentParser(
-        description="🛡️  Cyber Toolkit — Unified open source security tool launcher"
+        description="🛡️  Cyber Toolkit — Unified open source security + SIEM tool launcher"
     )
     subparsers = parser.add_subparsers(dest="tool")
 
-    # nmap
+    # --- Pentest tools ---
     p = subparsers.add_parser("nmap", help="Network port scanner")
-    p.add_argument("--target",  required=True, help="IP address or hostname")
-    p.add_argument("--profile", default="standard",
-                   choices=["quick", "standard", "full", "vuln"],
-                   help="Scan profile (default: standard)")
+    p.add_argument("--target",  required=True)
+    p.add_argument("--profile", default="standard", choices=["quick", "standard", "full", "vuln"])
 
-    # nikto
     p = subparsers.add_parser("nikto", help="Web server vulnerability scanner")
-    p.add_argument("--target", required=True, help="Target URL (e.g. http://localhost)")
+    p.add_argument("--target", required=True)
 
-    # sqlmap
     p = subparsers.add_parser("sqlmap", help="SQL injection scanner")
-    p.add_argument("--url", required=True, help="Target URL with parameters")
+    p.add_argument("--url", required=True)
 
-    # hashcat
     p = subparsers.add_parser("hashcat", help="Password hash cracker")
-    p.add_argument("--hash", required=True, help="Hash to crack")
-    p.add_argument("--mode", default="0",   help="Hash mode (0=MD5, 100=SHA1, 1800=SHA512)")
-    p.add_argument("--wordlist", default="data/wordlist.txt", help="Wordlist file path")
+    p.add_argument("--hash", required=True)
+    p.add_argument("--mode", default="0")
+    p.add_argument("--wordlist", default="data/wordlist.txt")
 
-    # gobuster
     p = subparsers.add_parser("gobuster", help="Directory brute-forcer")
-    p.add_argument("--url",      required=True, help="Target URL")
-    p.add_argument("--wordlist", default="data/wordlist.txt", help="Wordlist file")
+    p.add_argument("--url", required=True)
+    p.add_argument("--wordlist", default="data/wordlist.txt")
 
-    # whois
     p = subparsers.add_parser("whois", help="Domain WHOIS lookup")
-    p.add_argument("--domain", required=True, help="Domain name (e.g. example.com)")
+    p.add_argument("--domain", required=True)
 
-    # sslcheck
     p = subparsers.add_parser("sslcheck", help="SSL/TLS certificate analyzer")
-    p.add_argument("--domain", required=True, help="Domain to check")
+    p.add_argument("--domain", required=True)
+
+    # --- SIEM tools ---
+    p = subparsers.add_parser("wazuh", help="Wazuh SIEM/XDR platform")
+    p.add_argument("--action", default="status",
+                   choices=["status", "start", "stop", "restart", "tail", "agents"],
+                   help="Wazuh action (default: status)")
+
+    p = subparsers.add_parser("suricata", help="Suricata IDS/IPS/NSM")
+    p.add_argument("--action", default="status",
+                   choices=["status", "test", "update", "live", "pcap", "tail"],
+                   help="Suricata action (default: status)")
+    p.add_argument("--iface",  default="eth0", help="Network interface for live capture")
+    p.add_argument("--pcap",   default="",     help="PCAP file path for offline analysis")
+
+    p = subparsers.add_parser("zeek", help="Zeek network analysis framework")
+    p.add_argument("--action",   default="status",
+                   choices=["status", "live", "pcap", "log", "logs"],
+                   help="Zeek action (default: status)")
+    p.add_argument("--iface",    default="eth0", help="Network interface for live capture")
+    p.add_argument("--pcap",     default="",     help="PCAP file for analysis")
+    p.add_argument("--log-type", default="conn",
+                   choices=["conn", "dns", "http", "ssl", "files", "notice", "weird"],
+                   help="Zeek log type to display (default: conn)")
+
+    p = subparsers.add_parser("elk", help="ELK Stack SIEM (Elasticsearch/Logstash/Kibana)")
+    p.add_argument("--action", default="health",
+                   choices=["health", "indices", "kibana", "ingest", "search"],
+                   help="ELK action (default: health)")
+    p.add_argument("--es-url", default="http://localhost:9200", help="Elasticsearch URL")
+    p.add_argument("--kb-url", default="http://localhost:5601", help="Kibana URL")
+    p.add_argument("--index",  default="",  help="Index name for search action")
 
     return parser
 
