@@ -1,0 +1,7 @@
+# No external dependencies required!
+# All tools use Python standard library only.
+# Python 3.10+ recommended
+#
+# Optional (uncomment to install):
+# requests==2.31.0     # For future API integrations
+# colorama==0.4.6      # Windows ANSI color support
