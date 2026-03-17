@@ -1,23 +1,25 @@
 # 🛡️ SIEM Tools — Overview & Learning Guide
 
-This document explains the SIEM (Security Information and Event Management) tools
-integrated into the Cyber Toolkit and how they fit together in a real security operations center (SOC).
+This document explains the SIEM (Security Information and Event Management) tools integrated into the Cyber Toolkit and how they work together in a real-world Security Operations Center (SOC).
 
 ---
 
-## What is a SIEM?
+## 📌 What is a SIEM?
 
-A **SIEM** collects, normalizes, correlates, and alerts on security events from across your entire environment:
-- Servers and endpoints
-- Network devices (firewalls, switches, routers)
-- Applications and databases
-- Cloud services
+A **SIEM (Security Information and Event Management)** system collects, normalizes, correlates, and analyzes security events across your infrastructure:
 
-The goal: detect threats faster by connecting the dots across many log sources.
+- 🖥️ Servers and endpoints
+- 🌐 Network devices (firewalls, routers, switches)
+- 🗄️ Applications and databases
+- ☁️ Cloud services
+
+### 🎯 Goal:
+
+Detect threats faster by correlating logs from multiple sources.
 
 ---
 
-## The SIEM Stack in This Toolkit
+## 🧱 SIEM Stack Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -40,79 +42,135 @@ The goal: detect threats faster by connecting the dots across many log sources.
 
 ---
 
-## Tool Roles
+## 🔧 Tool Roles
 
 ### 🔵 Zeek — Network Visibility
-- Sits on the network and generates structured logs for every connection
-- Logs: `conn.log`, `dns.log`, `http.log`, `ssl.log`, `files.log`
-- Great for: detecting C2 beacons, DNS tunneling, unusual data transfers
-- NOT alert-based — Zeek logs everything and lets your SIEM find patterns
 
-### 🔴 Suricata — Threat Detection
-- Signature-based IDS/IPS — fires alerts when traffic matches known attack patterns
-- Uses community rulesets: ET Open, Snort rules, custom rules
-- Output: EVE JSON (ships perfectly into ELK or Wazuh)
-- Great for: detecting exploits, port scans, malware C2 traffic in real-time
+- Generates structured logs for all network activity
+- Logs include: `conn.log`, `dns.log`, `http.log`, `ssl.log`, `files.log`
+- Best for:
 
-### 🟠 Wazuh — Host-Based SIEM / XDR
-- Runs agents on endpoints to monitor:
-  - System logs (syslog, Windows Event Log, macOS logs)
-  - File integrity (FIM) — alerts when critical files change
-  - Rootkit and anomaly detection
-  - Vulnerability scanning
-- Correlates events across all agents on a central manager
-- Integrates natively with Suricata, Zeek, and ELK
+  - Detecting command-and-control (C2)
+  - DNS tunneling
+  - Suspicious traffic patterns
 
-### 🟢 ELK Stack — Storage, Search & Visualization
-- **Elasticsearch**: stores billions of events, full-text search, aggregations
-- **Logstash**: parse and enrich logs (grok filters, GeoIP, user-agent)
-- **Kibana**: build dashboards, run threat hunting queries, set up SIEM detection rules
-- **Filebeat**: lightweight agent to ship logs from endpoints to Elasticsearch
+👉 Zeek is **not alert-based** — it logs everything for analysis.
 
 ---
 
-## Typical Alert Flow
+### 🔴 Suricata — Threat Detection (IDS/IPS)
+
+- Signature-based intrusion detection system
+
+- Uses rulesets like:
+
+  - ET Open
+  - Snort rules
+
+- Outputs:
+
+  - `eve.json` (perfect for ELK ingestion)
+
+Best for:
+
+- Detecting exploits
+- Malware traffic
+- Port scans
+
+---
+
+### 🟠 Wazuh — Host-Based SIEM / XDR
+
+- Endpoint monitoring and correlation engine
+
+Monitors:
+
+- System logs (Linux, Windows, macOS)
+- File integrity (FIM)
+- Rootkits and anomalies
+- Vulnerabilities
+
+Features:
+
+- Centralized manager
+- Rule-based alerting
+- Active response
+
+---
+
+### 🟢 ELK Stack — Storage & Visualization
+
+| Component         | Role                        |
+| ----------------- | --------------------------- |
+| **Elasticsearch** | Stores and indexes logs     |
+| **Logstash**      | Parses and enriches logs    |
+| **Kibana**        | Dashboards & threat hunting |
+| **Filebeat**      | Ships logs from sources     |
+
+---
+
+## 🔄 Typical Alert Flow
 
 ```
 1. Attacker scans your network
-2. Suricata fires an alert: ET SCAN Nmap Scripting Engine
-3. EVE JSON log written to /var/log/suricata/eve.json
-4. Filebeat ships the log to Elasticsearch
-5. Wazuh agent also notices the scan in system logs
-6. Wazuh Manager correlates the two events → high severity alert
-7. Kibana SIEM dashboard shows the alert to the analyst
-8. Analyst investigates using Zeek conn.log and dns.log
+2. Suricata detects scan → generates alert
+3. Log written to /var/log/suricata/eve.json
+4. Filebeat ships log → Logstash → Elasticsearch
+5. Wazuh correlates related events
+6. Alert appears in Kibana dashboard
+7. Analyst investigates using Zeek logs
 ```
 
 ---
 
-## Getting Started (Local Lab)
+## 🚀 Running the SIEM Lab (Docker)
 
-The easiest way to run a full SIEM lab locally:
+### Start everything:
 
 ```bash
-# Option 1: Wazuh all-in-one installer (VM or bare metal)
-curl -sO https://packages.wazuh.com/4.7/wazuh-install.sh
-sudo bash wazuh-install.sh -a
-
-# Option 2: ELK via Docker Compose
-git clone https://github.com/deviantony/docker-elk.git
-cd docker-elk
-docker-compose up
-
-# Option 3: Elastic Security (built-in SIEM in Kibana)
-# After ELK is running, go to Kibana → Security
+docker-compose -f docs/elk-docker-compose.yml up -d
 ```
 
 ---
 
-## Learning Resources
+### 🌐 Access Services
 
-| Resource | Link |
-|----------|------|
-| Wazuh docs | https://documentation.wazuh.com |
-| Suricata docs | https://docs.suricata.io |
-| Zeek docs | https://docs.zeek.org |
-| Elastic SIEM | https://www.elastic.co/security |
-| TryHackMe SIEM room | https://tryhackme.com/room/introductoryroomdfirmodule |
-| Splunk Free Training | https://www.splunk.com/en_us/training/free-courses.html |
+| Service       | URL                    |
+| ------------- | ---------------------- |
+| Kibana        | http://localhost:5601  |
+| Elasticsearch | http://localhost:9200  |
+| Wazuh API     | http://localhost:55000 |
+
+---
+
+### ⚡ Health Check
+
+```bash
+python toolkit.py elk --action health
+```
+
+---
+
+### 🧪 Test Log Ingestion
+
+```bash
+sudo mkdir -p /var/log/suricata
+echo "test log" | sudo tee /var/log/suricata/test.log
+```
+
+Then check logs in **Kibana → Discover**
+
+---
+
+## 📚 Learning Resources
+
+| Resource           | Link                                  |
+| ------------------ | ------------------------------------- |
+| Wazuh Docs         | https://documentation.wazuh.com       |
+| Suricata Docs      | https://docs.suricata.io              |
+| Zeek Docs          | https://docs.zeek.org                 |
+| Elastic Security   | https://www.elastic.co/security       |
+| TryHackMe SIEM Lab | https://tryhackme.com                 |
+| Splunk Training    | https://www.splunk.com/en_us/training |
+
+---
