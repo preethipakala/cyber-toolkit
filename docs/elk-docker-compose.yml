@@ -36,7 +36,7 @@ services:
       - "5000:5000"   # TCP syslog input
       - "9600:9600"   # Monitoring API
     volumes:
-      - ./logstash/pipeline:/usr/share/logstash/pipeline:ro
+      - ./docs/logstash/pipeline:/usr/share/logstash/pipeline:ro
     depends_on:
       elasticsearch:
         condition: service_healthy
@@ -53,6 +53,44 @@ services:
     depends_on:
       elasticsearch:
         condition: service_healthy
+
+  wazuh:
+    image: wazuh/wazuh:4.7.0
+    container_name: wazuh
+    ports:
+      - "1514:1514"
+      - "55000:55000"
+    restart: unless-stopped
+
+  suricata:
+    image: jasonish/suricata:latest
+    container_name: suricata
+    network_mode: host
+    volumes:
+      - /var/log/suricata:/var/log/suricata
+    command: -i eth0
+    restart: unless-stopped
+
+  zeek:
+    image: zeek/zeek:latest
+    container_name: zeek
+    network_mode: host
+    volumes:
+      - /usr/local/zeek/logs:/usr/local/zeek/logs
+    restart: unless-stopped
+
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:8.12.0
+    container_name: filebeat
+    user: root
+    volumes:
+      - ./filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - /var/log/suricata:/var/log/suricata:ro
+      - /usr/local/zeek/logs:/usr/local/zeek/logs:ro
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    restart: unless-stopped     
 
 volumes:
   esdata:

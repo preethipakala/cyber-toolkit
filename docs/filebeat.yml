@@ -1,0 +1,8 @@
+filebeat.inputs:
+  - type: log
+    paths:
+      - /var/log/suricata/*.log
+      - /usr/local/zeek/logs/current/*.log
+
+output.logstash:
+  hosts: ["logstash:5044"]
